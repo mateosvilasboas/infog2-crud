@@ -61,7 +61,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 ### 3. Execute a aplicação
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 A API estará disponível em `http://localhost:8000`
@@ -83,26 +83,26 @@ poetry install
 O método recomendado para desenvolvimento é usar Docker Compose, que já configura todo o ambiente necessário:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Para acompanhar os logs da aplicação:
 
 ```bash
-docker-compose logs -f app
+docker compose logs -f app
 ```
 
 Para reiniciar a aplicação após alterações:
 
 ```bash
-docker-compose restart app
+docker compose restart app
 ```
 
 ### Migrações
 
 Acesse um bash dentro do container ``app``:
 ```bash
-docker-compose exec app bash
+docker compose exec app bash
 ```
 
 Para analisar migrações:

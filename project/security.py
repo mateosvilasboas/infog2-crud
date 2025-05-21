@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from project.config import settings
 from project.database import get_db
-from project.models import User
+from project.models.users import User
 
 password_context = PasswordHash.recommended()
 

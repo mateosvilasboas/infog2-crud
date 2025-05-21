@@ -3,7 +3,7 @@ from dataclasses import asdict
 import pytest
 from sqlalchemy import select
 
-from project.models import User
+from project.models.users import User
 from project.security import get_password_hash
 
 

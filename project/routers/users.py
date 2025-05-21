@@ -2,13 +2,13 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..models import User
-from ..schemas import (
+from ..models.users import User
+from ..schemas.users import (
     FilterPage,
     Message,
     UserList,
@@ -47,7 +47,12 @@ async def get_users(
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
 async def create_user(user: UserSchemaCreate, session: Session):
     db_user = await session.scalar(
-        select(User).where(User.email == user.email)
+        select(User).where(
+            or_(
+                User.email == user.email,
+                User.cpf == user.cpf
+            )
+        )
     )
 
     if db_user:
@@ -56,10 +61,20 @@ async def create_user(user: UserSchemaCreate, session: Session):
                 status_code=HTTPStatus.CONFLICT,
                 detail='Email already exists',
             )
+        if db_user.cpf == user.cpf:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT,
+                detail="CPF already exists"
+            )
 
     hashed_password = get_password_hash(user.password)
 
-    db_user = User(name=user.name, email=user.email, password=hashed_password)
+    db_user = User(
+        name=user.name, 
+        email=user.email,
+        cpf=user.cpf,
+        password=hashed_password
+    )
 
     session.add(db_user)
     await session.commit()

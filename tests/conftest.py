@@ -11,7 +11,7 @@ from testcontainers.postgres import PostgresContainer
 
 from project.database import get_db
 from project.main import app
-from project.models import Base, User
+from project.models.users import Base, User
 from project.security import get_password_hash
 
 

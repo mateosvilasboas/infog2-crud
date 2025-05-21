@@ -3,8 +3,8 @@ from http import HTTPStatus
 import pytest
 from sqlalchemy import select
 
-from project.models import User
-from project.schemas import UserPublic
+from project.models.users import User
+from project.schemas.users import UserPublic
 
 
 def test_create_user(client):

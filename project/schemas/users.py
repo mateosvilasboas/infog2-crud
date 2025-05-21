@@ -1,9 +1,11 @@
+from typing import List
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserSchema(BaseModel):
     name: str
     email: EmailStr
+    cpf: str
 
 
 class UserSchemaCreate(UserSchema):
@@ -14,15 +16,13 @@ class UserSchemaUpdate(UserSchema):
     password: str | None = None
 
 
-class UserPublic(BaseModel):
+class UserPublic(UserSchema):
     id: int
-    name: str
-    email: EmailStr
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserList(BaseModel):
-    users: list[UserPublic]
+    users: List[UserPublic]
 
 
 class FilterPage(BaseModel):
