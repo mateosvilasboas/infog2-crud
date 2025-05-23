@@ -17,6 +17,7 @@ alembic = "^1.14.0"
 pyjwt = "^2.10.1"
 psycopg = {extras = ["binary"], version = "^3.2.6"}
 pwdlib = {extras = ["argon2"], version = "^0.2.1"}
+validate-docbr = "^1.10.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from project.database import get_db
-from project.models.users import User
-from project.schemas.users import Token
+from project.models.base import User
+from project.schemas.others import Token
 from project.security import (
     create_access_token,
     get_current_user,

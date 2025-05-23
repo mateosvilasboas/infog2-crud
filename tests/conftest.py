@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -8,10 +9,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from testcontainers.postgres import PostgresContainer
+from validate_docbr import CPF
 
 from project.database import get_db
 from project.main import app
-from project.models.users import Base, User
+from project.models.base import Admin, Base, Client, Role
 from project.security import get_password_hash
 
 
@@ -65,10 +67,29 @@ def mock_db_time():
 
 
 @pytest_asyncio.fixture
-async def user(session):
+async def admin(session):
+    cpf = CPF().generate()
     password = 'senha1'
     hashed_password = get_password_hash(password)
-    user = UserFactory(password=hashed_password)
+    role = Role.ADMIN
+    user = AdminFactory(cpf=cpf, password=hashed_password, role=role)
+
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+
+    user.clean_password = password
+
+    return user
+
+
+@pytest_asyncio.fixture
+async def user(session):
+    cpf = CPF().generate()
+    password = 'senha1'
+    hashed_password = get_password_hash(password)
+    role = Role.CLIENT
+    user = UserFactory(cpf=cpf, password=hashed_password, role=role)
 
     session.add(user)
     await session.commit()
@@ -81,9 +102,11 @@ async def user(session):
 
 @pytest_asyncio.fixture
 async def other_user(session):
+    cpf = CPF().generate()
     password = 'senha2'
     hashed_password = get_password_hash(password)
-    user = UserFactory(password=hashed_password)
+    role = Role.CLIENT
+    user = UserFactory(cpf=cpf, password=hashed_password, role=role)
 
     session.add(user)
     await session.commit()
@@ -104,10 +127,33 @@ def token(client, user):
     return response.json()['access_token']
 
 
+@pytest.fixture
+def admin_token(client, admin):
+    response = client.post(
+        '/auth/token',
+        data={'username': admin.email, 'password': admin.clean_password},
+    )
+
+    return response.json()['access_token']
+
+
 class UserFactory(factory.Factory):
     class Meta:
-        model = User
+        model = Client
 
-    name = factory.Sequence(lambda n: f'teste{n}')
+    name = factory.Sequence(lambda n: f'client{n}')
+    cpf = factory.Faker('cpf')
     email = factory.LazyAttribute(lambda obj: f'{obj.name}@teste.com')
     password = factory.LazyAttribute(lambda obj: f'{obj.name}@example.com')
+    role = factory.Faker('role')
+
+
+class AdminFactory(factory.Factory):
+    class Meta:
+        model = Admin
+
+    name = factory.Sequence(lambda n: f'admin{n}')
+    cpf = factory.Faker('cpf')
+    email = factory.LazyAttribute(lambda obj: f'{obj.name}@teste.com')
+    password = factory.LazyAttribute(lambda obj: f'{obj.name}@example.com')
+    role = factory.Faker('role')

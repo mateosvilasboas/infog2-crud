@@ -8,7 +8,11 @@ from project.security import create_access_token
 def test_get_token(client, user):
     response = client.post(
         '/auth/token/',
-        data={'username': user.email, 'password': user.clean_password},
+        data={
+            'username': user.email,
+            'cpf': user.cpf,
+            'password': user.clean_password,
+        },
     )
 
     assert response.status_code == HTTPStatus.OK
@@ -73,7 +77,7 @@ def test_get_current_user_not_found(client):
     token = create_access_token(data)
 
     response = client.delete(
-        '/users/1', headers={'Authorization': f'Bearer {token}'}
+        '/client/1', headers={'Authorization': f'Bearer {token}'}
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
@@ -85,7 +89,7 @@ def test_get_current_user_does_not_exist(client):
     token = create_access_token(data)
 
     response = client.delete(
-        '/users/1', headers={'Authorization': f'Bearer {token}'}
+        '/client/1', headers={'Authorization': f'Bearer {token}'}
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
@@ -104,7 +108,7 @@ def test_token_expiration(client, user):
 
     with freeze_time('2025-01-01 12:31:00'):
         response = client.put(
-            f'/users/{user.id}',
+            f'/client/{user.id}',
             headers={'Authorization': f'Bearer {token}'},
             json={
                 'name': 'errado da silva',

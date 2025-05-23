@@ -7,12 +7,12 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, decode, encode
 from pwdlib import PasswordHash
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from project.config import settings
 from project.database import get_db
-from project.models.users import User
+from project.models.base import User
 
 password_context = PasswordHash.recommended()
 
@@ -65,7 +65,12 @@ async def get_current_user(
         raise credentials_exception
 
     user = await session.scalar(
-        select(User).where(User.email == subject_email)
+        select(User).where(
+            and_(
+                User.email == subject_email,
+                User.is_deleted == False,  # noqa
+            )
+        )
     )
 
     if not user:

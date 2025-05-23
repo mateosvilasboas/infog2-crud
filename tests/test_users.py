@@ -2,18 +2,31 @@ from http import HTTPStatus
 
 import pytest
 from sqlalchemy import select
+from validate_docbr import CPF
 
-from project.models.users import User
-from project.schemas.users import UserPublic
+from project.models.base import Role, User
 
 
-def test_create_user(client):
+def test_get_users(client, admin_token):
+    response = client.get(
+        '/admin/', headers={'Authorization': f'Bearer {admin_token}'}
+    )
+
+    users = response.json()['users']
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {'users': users}
+
+
+def test_create_client(client):
     password = 'senha'
+    cpf = CPF().generate()
     response = client.post(
-        '/users/',
+        '/client/',
         json={
             'name': 'alice',
             'email': 'alice@example.com',
+            'cpf': cpf,
             'password': password,
         },
     )
@@ -22,25 +35,46 @@ def test_create_user(client):
     assert response.json() == {
         'name': 'alice',
         'email': 'alice@example.com',
+        'cpf': cpf,
         'id': 1,
+        'role': Role.CLIENT.value,
     }
 
 
-def test_create_user_with_existing_email(client):
-    client.post(
-        '/users/',
+def test_create_client_invalid_cpf(client):
+    password = 'senha'
+    response = client.post(
+        '/client/',
         json={
             'name': 'alice',
             'email': 'alice@example.com',
-            'password': 'password123',
+            'cpf': '00000000000',
+            'password': password,
         },
     )
 
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail': 'Invalid CPF'}
+
+
+def test_create_client_with_existing_email(client):
+    cpf = CPF().generate()
+    client.post(
+        '/client/',
+        json={
+            'name': 'john',
+            'email': 'alice@example.com',
+            'cpf': cpf,
+            'password': 'password123',
+        },
+    )
+    cpf = CPF().generate()
     response = client.post(
-        '/users/',
+        '/client/',
         json={
             'name': 'alice two',
             'email': 'alice@example.com',
+            'cpf': cpf,
             'password': 'password456',
         },
     )
@@ -49,27 +83,35 @@ def test_create_user_with_existing_email(client):
     assert response.json() == {'detail': 'Email already exists'}
 
 
-def test_get_users(client):
-    response = client.get(
-        '/users/',
+def test_create_client_with_existing_cpf(client):
+    cpf = CPF().generate()
+    client.post(
+        '/client/',
+        json={
+            'name': 'alice',
+            'email': 'alice@example.com',
+            'cpf': cpf,
+            'password': 'password123',
+        },
     )
 
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'users': []}
+    response = client.post(
+        '/client/',
+        json={
+            'name': 'alice two',
+            'email': 'alice_2@example.com',
+            'cpf': cpf,
+            'password': 'password456',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'CPF already exists'}
 
 
-def test_get_users_with_users(client, user):
-    users_schema = UserPublic.model_validate(user).model_dump()
-
-    response = client.get('/users/')
-
-    assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'users': [users_schema]}
-
-
-def test_update_user_without_password(client, user, token):
+def test_update_client_without_password(client, user, token):
     response = client.put(
-        f'/users/{user.id}',
+        f'/client/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'name': 'bob',
@@ -81,13 +123,15 @@ def test_update_user_without_password(client, user, token):
     assert response.json() == {
         'name': 'bob',
         'email': 'bob@email.com',
+        'cpf': user.cpf,
         'id': 1,
+        'role': Role.CLIENT.value,
     }
 
 
-def test_update_user_with_password(client, user, token):
+def test_update_client_with_password(client, user, token):
     response = client.put(
-        f'/users/{user.id}',
+        f'/client/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'name': 'bob',
@@ -99,23 +143,27 @@ def test_update_user_with_password(client, user, token):
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'name': 'bob',
+        'cpf': user.cpf,
         'email': 'bob@email.com',
         'id': 1,
+        'role': Role.CLIENT.value,
     }
 
 
 def test_update_user_integrity_error(client, user, token):
+    cpf = CPF().generate()
     client.post(
-        '/users',
+        '/client/',
         json={
             'name': 'bob',
             'email': 'bob@email.com',
+            'cpf': cpf,
             'password': 'senhaatual',
         },
     )
 
     response = client.put(
-        f'/users/{user.id}',
+        f'/client/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'name': 'bob2',
@@ -128,9 +176,9 @@ def test_update_user_integrity_error(client, user, token):
     assert response.json() == {'detail': 'Email already exists'}
 
 
-def test_update_user_with_wrong_user(client, other_user, token):
+def test_update_client_with_wrong_user(client, other_user, token):
     response = client.put(
-        f'/users/{other_user.id}',
+        f'/client/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'name': 'bruno',
@@ -144,9 +192,9 @@ def test_update_user_with_wrong_user(client, other_user, token):
 
 
 @pytest.mark.asyncio
-async def test_delete_user(client, user, token, session):
+async def test_delete_client(client, user, token, session):
     response = client.delete(
-        f'/users/{user.id}',
+        f'/client/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
 
@@ -160,9 +208,11 @@ async def test_delete_user(client, user, token, session):
 
 
 @pytest.mark.asyncio
-async def test_delete_user_with_wrong_user(client, other_user, token, session):
+async def test_delete_client_with_wrong_user(
+    client, other_user, token, session
+):
     response = client.delete(
-        f'/users/{other_user.id}',
+        f'/client/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
 
